@@ -80,7 +80,8 @@ $Form.controls.AddRange(@($TextBox1,$Label1,$Label2,$RadioButton1,$RadioButton2,
 				Write-Host "Waiting for $($localport) to be ready"
 				Start-Sleep -Seconds 2
             }
-			Write-Host "Connecting to $($localport)"
+	    Start-Sleep -Seconds 5
+	    Write-Host "Connecting to $($localport)"
             rdp-connect $localport
         }
         elseif ($RadioButton2.checked) {
@@ -91,8 +92,9 @@ $Form.controls.AddRange(@($TextBox1,$Label1,$Label2,$RadioButton1,$RadioButton2,
 				Write-Host "Waiting for $($localport) to be ready"
 				Start-Sleep -Seconds 2
             }
-			Write-Host "Connecting to $($localport)"
-			ssh-connect $localport $TextBox2.text
+	    Start-Sleep -Seconds 5
+	    Write-Host "Connecting to $($localport)"
+	    ssh-connect $localport $TextBox2.text
 		}
     }
 )
