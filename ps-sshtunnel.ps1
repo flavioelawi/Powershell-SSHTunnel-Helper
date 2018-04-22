@@ -49,13 +49,13 @@ $Label2.height                   = 100
 $Label2.location                 = New-Object System.Drawing.Point(70,230)
 $Label2.Font                     = 'Microsoft Sans Serif,10'
 
-$MaskedTextBox1                  = New-Object system.Windows.Forms.TextBox
-$MaskedTextBox1.PasswordChar     = "*" 
-$MaskedTextBox1.multiline        = $false
-$MaskedTextBox1.width            = 100
-$MaskedTextBox1.height           = 20
-$MaskedTextBox1.location         = New-Object System.Drawing.Point(70,250)
-$MaskedTextBox1.Font             = 'Microsoft Sans Serif,10'
+$TextBox2                  = New-Object system.Windows.Forms.TextBox
+$TextBox2.PasswordChar     = "*" 
+$TextBox2.multiline        = $false
+$TextBox2.width            = 100
+$TextBox2.height           = 20
+$TextBox2.location         = New-Object System.Drawing.Point(70,250)
+$TextBox2.Font             = 'Microsoft Sans Serif,10'
 
 $Button1                         = New-Object system.Windows.Forms.Button
 $Button1.text                    = "Connect"
@@ -64,29 +64,36 @@ $Button1.height                  = 50
 $Button1.location                = New-Object System.Drawing.Point(123,299)
 $Button1.Font                    = 'Microsoft Sans Serif,10'
 
-$Form.controls.AddRange(@($TextBox1,$Label1,$Label2,$RadioButton1,$RadioButton2,$Button1,$MaskedTextBox1))
+$Form.controls.AddRange(@($TextBox1,$Label1,$Label2,$RadioButton1,$RadioButton2,$Button1,$TextBox2))
 
 #region gui events {
     $Button1.Add_Click(
     {
         $ErrorActionPreference = "SilentlyContinue"
         $localport = find-localport
+		Write-Host "Found free port: $($localport)"
         if ($RadioButton1.checked) {
-            create-tunnel $TextBox1.text "3389" $localport
-            while ($True){
-                Get-NetTCPConnection -state Established -LocalPort $localport
-                Start-Sleep -Seconds 2
+            create-tunnel $TextBox1.text  "3389" $localport $TextBox2.text
+			$listening = Get-NetTCPConnection -state listen -LocalPort $localport
+            while ($listening -eq $False){
+				$listening = Get-NetTCPConnection -state listen -LocalPort $localport
+				Write-Host "Waiting for $($localport) to be ready"
+				Start-Sleep -Seconds 2
             }
+			Write-Host "Connecting to $($localport)"
             rdp-connect $localport
         }
         elseif ($RadioButton2.checked) {
-            create-tunnel $TextBox1.text "22" $localport
-            while ($True){
-                Get-NetTCPConnection -state Established -LocalPort $localport
-                Start-Sleep -Seconds 2
+            create-tunnel $TextBox1.text  "22"  $localport $TextBox2.text
+			$listening = Get-NetTCPConnection -state listen -LocalPort $localport
+            while ($listening -eq $False){
+				$listening = Get-NetTCPConnection -state listen -LocalPort $localport
+				Write-Host "Waiting for $($localport) to be ready"
+				Start-Sleep -Seconds 2
             }
-            ssh-connect $localport
-        }
+			Write-Host "Connecting to $($localport)"
+			ssh-connect $localport $TextBox2.text
+		}
     }
 )
 #endregion events }
@@ -96,10 +103,11 @@ $Form.controls.AddRange(@($TextBox1,$Label1,$Label2,$RadioButton1,$RadioButton2,
 
 #Write your logic code here
 $domain="Your domain here"
-$ssh_bastion="Your ssh bastion here"
+$ssh_bastion="Yur Bastion ip or hostname here"
 function create-tunnel {
-    param($remote_host,$remote_port,$localport)
-    putty "$($domain)\\$($env:UserName)@$($ssh_bastion) -L $($localport):$($remote_host):$($remote_port)"
+    param($remote_host,$remote_port,$localport, $password)
+	Write-Host "$($domain)\\$($env:UserName)@$($ssh_bastion) -L $($localport):$($remote_host):$($remote_port) -pw $($password)"
+    & "putty" $($ssh_bastion) -l "$($env:UserName)" -L "$($localport):$($remote_host):$($remote_port)" -pw "$($password)"
 }
 
 function find-localport{
@@ -110,19 +118,18 @@ function find-localport{
             $localport = $localport + 1
         }
         else{
-            Write-Host "Port free $($localport)"
             return $localport
         }
     }
 }
 
 function ssh-connect {
-    param($port)
-        putty localhost:$port
+    param($port,$password)
+        & "putty" localhost "$($port)" -l "$($env:UserName)" -pw "$($password)"
 }
 function rdp-connect {
     param($port)
-        mstsc /v localhost:$port
+        & "mstsc" /v localhost:$port
     
 }
 
